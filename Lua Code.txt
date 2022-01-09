@@ -1,0 +1,77 @@
+--You can define your own functions as is done here for parsePayload
+function parsePayload(appeui,deveui,payload)
+--[[  
+-- PHASE 1 y 2
+value = resiot_hexdecode_ascii(payload)
+-- Set the separator
+separator = ";"
+-- Set a count to assign the values 
+counter = 0
+-- for i in string.gmatch(value,"(.-)"..separator) do 
+for i in (value..separator):gmatch("([^;]*);") do 
+  resiot_debug(string.format("Value: %s \n", i))
+  if counter == 0 then
+    worked, err = resiot_setnodevalue(appeui, deveui, "Latitude", i)
+  elseif counter == 1 then
+    worked, err = resiot_setnodevalue(appeui, deveui, "Longitude", i)
+  elseif counter == 2 then
+    worked, err = resiot_setnodevalue(appeui, deveui, "SoilMoisture", i)
+  elseif counter == 3 then
+    worked, err = resiot_setnodevalue(appeui, deveui, "Temperature", i)
+  elseif counter == 4 then
+    worked, err = resiot_setnodevalue(appeui, deveui, "Light", i)
+  end
+  counter = counter + 1
+end
+]]--
+
+-- PHASE 3 
+------------
+value = resiot_hexdecode(payload)
+lat = resiot_ba2float32(resiot_baslice(value,0,4))
+lon = resiot_ba2float32(resiot_baslice(value,4,8))
+sm = resiot_ba2int(resiot_baslice(value,8,10))/10
+temp = resiot_ba2int(resiot_baslice(value,10,12))/10
+hum = resiot_ba2int(resiot_baslice(value,12,14))/10
+light = value[15]
+x = resiot_ba2float32(resiot_baslice(value,15,19))
+y = resiot_ba2float32(resiot_baslice(value,19,23))
+z = resiot_ba2float32(resiot_baslice(value,23,27))
+red = value[28]
+green = value[29]
+blue = value[30]
+worked, err = resiot_setnodevalue(appeui, deveui, "Latitude", lat)
+worked, err = resiot_setnodevalue(appeui, deveui, "Longitude", lon)
+worked, err = resiot_setnodevalue(appeui, deveui, "SoilMoisture", sm)
+worked, err = resiot_setnodevalue(appeui, deveui, "Temperature", temp)
+worked, err = resiot_setnodevalue(appeui, deveui, "Humidity", hum)
+worked, err = resiot_setnodevalue(appeui, deveui, "Light", light)
+worked, err = resiot_setnodevalue(appeui, deveui, "x", x)
+worked, err = resiot_setnodevalue(appeui, deveui, "y", y)
+worked, err = resiot_setnodevalue(appeui, deveui, "z", z)
+worked, err = resiot_setnodevalue(appeui, deveui, "red", red)
+worked, err = resiot_setnodevalue(appeui, deveui, "green", green)
+worked, err = resiot_setnodevalue(appeui, deveui, "blue", blue)
+--Call for LUA Script engine prints
+--resiot_debug(string.format("lat: %s \nlon: %s, sm: %s, temp: %s, hum: %s, light: %s, x: %s, y: %s, z: %s, red: %s, green: %s, blue: %s \n", lat,lon,sm,temp,hum,light,x,y,z,red,green,blue))
+if (not worked) then
+resiot_debug(string.format("Set Value Error %s \n",err))
+else
+resiot_debug("Set Node value successfull\n")
+end
+end
+Origin = resiot_startfrom() --Scene process starts here
+--Manual script execution for testing
+if Origin == "Manual" then
+--payload = "38333b32393b3130" --Set your test payload here in hexadecimal
+payload = "66f72042b0f207c2000700ad026b0d0000cebc0000303e0000743f090a0a"
+appeui = "70b3d57ed000fcda" --Set your Application EUI here
+deveui = "8539323559379194" --Set your own Device EUI here
+-- Normal execution, get payload received from device
+else
+appeui = resiot_comm_getparam("appeui")
+deveui = resiot_comm_getparam("deveui")
+payload, err = resiot_getlastpayload(appeui, deveui)
+end
+--Do your stuff
+parsePayload(appeui,deveui,payload)
